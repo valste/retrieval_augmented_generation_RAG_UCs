@@ -1,3 +1,91 @@
+"""
+
+# File Summary
+
+Very basic RAG-style demo that chunks a small in-memory corpus, builds embeddings with a selectable backend (FastEmbed → SentenceTransformers → OpenAI), 
+indexes them (FAISS or NumPy fallback), retrieves top-K chunks for a question, assembles a citation-rich prompt, and calls an OpenAI chat model 
+to generate a concise, sourced answer.
+
+**Key Features:**
+
+* Environment prep: sets OpenAI key via `set_apiKey_env()` and disables TF/telemetry side effects.
+* Configurable knobs:
+  * `MODEL_GENERATION="gpt-4o-mini"` (final answer)
+  * Chunking: `CHUNK_TOKENS=350`, `CHUNK_OVERLAP=60`
+  * Retrieval: `TOP_K=6`, `TEMPERATURE=0.2`
+* Pluggable embeddings (auto-select by availability):
+  1. **FastEmbed** (`BAAI/bge-small-en-v1.5`)
+  2. **SentenceTransformers** (`intfloat/e5-base-v2`, with `query:/passage:` prefixes)
+  3. **OpenAI** (`text-embedding-3-small`, dim=1536)
+* Vector store: **FAISS** inner-product index if available; otherwise NumPy matrix with cosine-like sims via L2-normed vectors.
+* Prompt builder: dedupes contexts, appends labeled source blocks `[S1]…`, instructs model to cite inline.
+* Demo flow in `main()`: indexes example AI-policy texts, queries “What are Taiwan’s latest AI policies in 2025?”, prints prompt preview and the generated answer.
+
+**Data & Chunking:**
+
+* Toy corpus `DOCS` with 4 short policy snippets (IDs, sources, text).
+* Tokenization via `tiktoken` (`cl100k_base`), overlapping fixed-size windows.
+
+**Dependencies:**
+
+* Python: `numpy`, `tiktoken`
+* Optional: `fastembed`, `sentence_transformers`, `faiss`
+* OpenAI SDK (`openai`) and a valid `OPENAI_API_KEY` (set by `openAI_apiKey.set_apiKey_env`).
+
+**Main Components:**
+
+* `clean_text(s)`: whitespace normalization.
+* `tokenize_chunks(text)`: token-based chunking with overlap.
+* `Embedder`:
+
+  * Auto-probes backends; normalizes outputs.
+  * `embed_docs(texts)`, `embed_query(text)` (adds e5 prefixes when needed).
+* `VectorStore`:
+
+  * `add_documents(docs)`: chunk → embed → index; stores per-chunk metadata.
+  * `query(q, top_k)`: returns (score, meta) for nearest chunks.
+* `build_prompt(question, contexts)`: composes instruction + sources with inline `[S#]` citations.
+* `call_llm(prompt)`: calls OpenAI Chat Completions with configured model/temp.
+* `main()`: end-to-end demo.
+
+**I/O & Side Effects:**
+
+* Inputs: in-code corpus + a single `question` string.
+* Outputs: console prints (prompt preview + model answer).
+* External: network calls if OpenAI or remote models are used.
+
+**Security/Privacy Notes:**
+
+* Requires `OPENAI_API_KEY` in environment; avoid printing it.
+* If OpenAI embeddings are used, chunk text leaves your environment (cost + privacy consideration).
+
+**Operational Notes:**
+
+* FAISS is preferred; if unavailable, NumPy fallback is automatic (slower, but portable).
+* Embedding vectors are L2-normalized before inner product search to approximate cosine.
+* E5 uses `query:`/`passage:` prefixes for best results; FastEmbed/OpenAI use raw text.
+
+**How to Run:**
+
+```bash
+# (Optional) install extras:
+# pip install numpy tiktoken fastembed sentence-transformers faiss-cpu openai
+
+export OPENAI_API_KEY=...  # or ensure set_apiKey_env() provides it
+python your_script.py
+```
+
+**further pimp-ups**
+
+* Add persistence for the index and metadata (save/load).
+* Implement simple re-ranking (e.g., cross-encoder) before prompt construction.
+* Stream model output; add token-usage logging & cost guardrails.
+* Parameterize corpus loading from files/dirs instead of in-code strings.
+* Add unit tests for chunking and backend selection.
+
+"""
+
+
 import os, re
 from typing import List, Dict, Tuple
 import numpy as np
