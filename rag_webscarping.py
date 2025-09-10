@@ -39,6 +39,10 @@ from fastembed import TextEmbedding
 #from sentence_transformers import SentenceTransformer
 import tiktoken
 
+# setting up the OpenAI API key environment variable to be able to access the OpenAI API
+from openAI_apiKey import set_apiKey_env
+set_apiKey_env()
+
 ###############################################################################
 # 0) CONFIG
 ###############################################################################
@@ -58,12 +62,6 @@ SEED_URLS = [
     "https://english.ey.gov.tw/" ,
 ]
 
-# --- Read API key if you still want OpenAI as last-resort fallback ---
-if os.path.exists("vst.openai.api.key"):
-    with open("vst.openai.api.key", "r", encoding="utf-8") as f:
-        key = f.read().strip()
-        if key:
-            os.environ["OPENAI_API_KEY"] = key
 
 ###############################################################################
 # UTILS

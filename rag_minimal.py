@@ -2,15 +2,12 @@ import os, re
 from typing import List, Dict, Tuple
 import numpy as np
 import tiktoken
+from openAI_apiKey import set_apiKey_env
 
-try
+# setting up the OpenAI API key environment variable to be able to access the OpenAI API
+from openAI_apiKey import set_apiKey_env
+set_apiKey_env()
 
-# --- Read API key if you still want OpenAI as last-resort fallback ---
-if os.path.exists("vst.openai.api.key"):
-    with open("vst.openai.api.key", "r", encoding="utf-8") as f:
-        key = f.read().strip()
-        if key:
-            os.environ["OPENAI_API_KEY"] = key
 
 # Avoid transformers pulling in TF when present
 os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
