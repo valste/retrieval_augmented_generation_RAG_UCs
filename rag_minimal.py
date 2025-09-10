@@ -3,6 +3,8 @@ from typing import List, Dict, Tuple
 import numpy as np
 import tiktoken
 
+try
+
 # --- Read API key if you still want OpenAI as last-resort fallback ---
 if os.path.exists("vst.openai.api.key"):
     with open("vst.openai.api.key", "r", encoding="utf-8") as f:
